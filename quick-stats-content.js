@@ -1,0 +1,214 @@
+export const getQuickStatsContent = () => {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Conflict Summary</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 20px;
+            background: #fff;
+            color: #000;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .conflict-block {
+            border: 1px solid #000;
+            margin-bottom: 15px;
+        }
+        .conflict-header {
+            background: #f0f0f0;
+            padding: 8px;
+            font-weight: bold;
+            border-bottom: 1px solid #000;
+        }
+        .code-block {
+            padding: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .conflict-marker {
+            font-weight: bold;
+        }
+        .summary-list {
+            list-style: none;
+            border: 1px solid #000;
+        }
+        .summary-list li {
+            padding: 8px 12px;
+            border-bottom: 1px solid #000;
+        }
+        .summary-list li:last-child {
+            border-bottom: none;
+        }
+        .change-type {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Merge Conflict Summary</h1>
+
+        <div class="section">
+            <div class="section-title">CONFLICT: DB_CONFIG object</div>
+            <div class="conflict-block">
+                <div class="conflict-header">HEAD (current branch)</div>
+                <div class="code-block">name: process.env.DB_NAME || 'prod_db',
+poolSize: 15,
+timeout: 4000,
+maxRetries: 3,</div>
+            </div>
+            <div class="conflict-block">
+                <div class="conflict-header">feature (incoming branch)</div>
+                <div class="code-block">name: process.env.DB_NAME || 'feature_db',
+poolSize: 20,
+timeout: 5000,
+replicaHost: process.env.DB_REPLICA_HOST || null,</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">CONFLICT: connectDB function</div>
+            <div class="conflict-block">
+                <div class="conflict-header">HEAD (current branch)</div>
+                <div class="code-block">async function connectDB(retries = DB_CONFIG.maxRetries) {
+  try {
+    logger.info(\`Connecting to DB at \${DB_CONFIG.host}:\${DB_CONFIG.port}/\${DB_CONFIG.name}\`);
+    await new Promise((res) => setTimeout(res, 50));
+    logger.info('DB connection established');
+  } catch (err) {
+    if (retries > 0) {
+      logger.warn(\`DB connection failed, retrying... (\${retries} left)\`);
+      await new Promise((res) => setTimeout(res, 1000));
+      return connectDB(retries - 1);
+    }
+    throw err;
+  }
+}</div>
+            </div>
+            <div class="conflict-block">
+                <div class="conflict-header">feature (incoming branch)</div>
+                <div class="code-block">async function connectDB() {
+  logger.info(\`Connecting to primary DB at \${DB_CONFIG.host}:\${DB_CONFIG.port}\`);
+  await new Promise((res) => setTimeout(res, 50));
+  if (DB_CONFIG.replicaHost) {
+    logger.info(\`Connecting to replica at \${DB_CONFIG.replicaHost}\`);
+    await new Promise((res) => setTimeout(res, 30));
+  }
+  logger.info('DB pool ready');
+}</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">CONFLICT: disconnectDB function</div>
+            <div class="conflict-block">
+                <div class="conflict-header">HEAD (current branch)</div>
+                <div class="code-block">async function disconnectDB() {
+  logger.info('Closing DB connection...');
+  await new Promise((res) => setTimeout(res, 20));
+  logger.info('DB connection closed');
+}</div>
+            </div>
+            <div class="conflict-block">
+                <div class="conflict-header">feature (incoming branch)</div>
+                <div class="code-block">async function disconnectDB() {
+  logger.info('Draining DB pool...');
+  await new Promise((res) => setTimeout(res, 20));
+  logger.info('DB pool closed');
+}</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">RESOLVED CHANGES</div>
+            <ul class="summary-list">
+                <li><span class="change-type">[MERGED]</span>DB_CONFIG.name: Using 'prod_db' from HEAD</li>
+                <li><span class="change-type">[MERGED]</span>DB_CONFIG.poolSize: Increased from 15 to 20</li>
+                <li><span class="change-type">[MERGED]</span>DB_CONFIG.timeout: Increased from 4000 to 5000</li>
+                <li><span class="change-type">[MERGED]</span>DB_CONFIG.maxRetries: Kept value 3 from HEAD</li>
+                <li><span class="change-type">[ADDED]</span>DB_CONFIG.replicaHost: Added replica host configuration</li>
+                <li><span class="change-type">[MERGED]</span>connectDB: Combined retry logic from HEAD with replica connection from feature</li>
+                <li><span class="change-type">[MERGED]</span>disconnectDB: Using "Draining DB pool" message from feature</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">RESOLVED CODE</div>
+            <div class="conflict-block">
+                <div class="code-block">const { logger } = require('../utils/logger');
+
+const DB_CONFIG = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 5432,
+  name: process.env.DB_NAME || 'prod_db',
+  poolSize: 20,
+  timeout: 5000,
+  maxRetries: 3,
+  replicaHost: process.env.DB_REPLICA_HOST || null,
+};
+
+async function connectDB(retries = DB_CONFIG.maxRetries) {
+  try {
+    logger.info(\`Connecting to DB at \${DB_CONFIG.host}:\${DB_CONFIG.port}/\${DB_CONFIG.name}\`);
+
+    await new Promise((res) => setTimeout(res, 50));
+
+    if (DB_CONFIG.replicaHost) {
+      logger.info(\`Connecting to replica at \${DB_CONFIG.replicaHost}\`);
+      await new Promise((res) => setTimeout(res, 30));
+    }
+
+    logger.info('DB pool ready');
+  } catch (err) {
+    if (retries > 0) {
+      logger.warn(\`DB connection failed, retrying... (\${retries} left)\`);
+      await new Promise((res) => setTimeout(res, 1000));
+      return connectDB(retries - 1);
+    }
+    throw err;
+  }
+}
+
+async function disconnectDB() {
+  logger.info('Draining DB pool...');
+  await new Promise((res) => setTimeout(res, 20));
+  logger.info('DB pool closed');
+}
+
+module.exports = { connectDB, disconnectDB, DB_CONFIG };</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+`;
+};
