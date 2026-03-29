@@ -229,8 +229,12 @@ export const getQuickStatsContent = (results: ResolutionResult[] = []) => {
 };
 
 function getConfidenceClass(confidence: number): string {
-	if (confidence >= 0.7) return 'high';
-	if (confidence >= 0.4) return 'medium';
+	if (confidence >= 0.7) {
+		return 'high';
+	}
+	if (confidence >= 0.4) {
+		return 'medium';
+	}
 	return 'low';
 }
 

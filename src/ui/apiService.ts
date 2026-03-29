@@ -1,10 +1,7 @@
-// API service for AI merge endpoints
 import * as vscode from 'vscode';
 
 // Configuration
-const BASE_URL = vscode.workspace
-	.getConfiguration('automerge')
-	.get('apiBaseUrl', 'http://localhost:8000/predictor/');
+const BASE_URL = 'http://localhost:8080/predictor/';
 
 // Store resolution results for display in Quick Stats
 export interface ResolutionResult {
@@ -94,15 +91,16 @@ export async function resolveBatch(
 			'results' in data &&
 			Array.isArray((data as Record<string, unknown>).results)
 		) {
-			const results = ((data as Record<string, unknown>).results as Array<
-				Record<string, unknown>
-			>).map((r) => ({
+			const results = (
+				(data as Record<string, unknown>).results as Array<
+					Record<string, unknown>
+				>
+			).map((r) => ({
 				result: r.result as string,
 				summary: r.summary as string,
-				confidence:
-					typeof r.confidence === 'number' ? r.confidence : 0.0,
+				confidence: typeof r.confidence === 'number' ? r.confidence : 0.0,
 			}));
-			// Store for Quick Stats
+
 			lastResolutionResults = results;
 			return results;
 		}
