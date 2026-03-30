@@ -37,14 +37,14 @@ export const getDeveloperGuideContent = () => {
 		<h1>AutoMerge - Developer's Guide</h1>
 
 		<h2>Overview</h2>
-		<p>AutoMerge uses AI (Ollama with Qwen 3.5) and RAG (Retrieval-Augmented Generation) to automatically resolve git merge conflicts.</p>
+		<p>AutoMerge uses AI (Ollama with Qwen 3.5 || Hugging Face 'ankit-ml11/automerge-codet5') and RAG (Retrieval-Augmented Generation) to automatically resolve git merge conflicts.</p>
 
 		<h2>How It Works</h2>
 		<ol>
 			<li>When you encounter a merge conflict, click the <code>$(sparkle) Resolve conflict (AI)</code> CodeLens above the conflict</li>
 			<li>The extension sends the conflict to the local API server</li>
 			<li>The server uses RAG to find similar patterns in your codebase</li>
-			<li>Qwen 3.5 generates an intelligent resolution with an explanation</li>
+			<li>Qwen 3.5 or the Hugging Face model generates an intelligent resolution with an explanation</li>
 			<li>Review the resolution and summary in the Quick Stats panel</li>
 		</ol>
 
@@ -52,6 +52,7 @@ export const getDeveloperGuideContent = () => {
 		<ol>
 			<li>Ensure Ollama is running: <code>ollama serve</code></li>
 			<li>Pull the Qwen 3.5 model: <code>ollama pull qwen3.5</code></li>
+			<li>Pull the Hugging Face model: <code>ollama pull ankit-ml11/automerge-codet5</code></li>
 			<li>Start the API server: <code>cd automerge_server && uvicorn main:app --reload</code></li>
 			<li>Build the RAG index (optional): <code>python scripts/build_index.py --git-history</code></li>
 		</ol>

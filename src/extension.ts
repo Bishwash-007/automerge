@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			// Detect all conflicts — consume full >>>>>>> line including branch name
 			const conflictRegex = /<<<<<<<[\s\S]*?>>>>>>>.*(\r?\n)?/g;
-			const conflictMatches = [];
+			const conflictMatches: { text: string; index: number }[] = [];
 			let match;
 			while ((match = conflictRegex.exec(text)) !== null) {
 				conflictMatches.push({ text: match[0], index: match.index });
@@ -85,8 +85,125 @@ export function activate(context: vscode.ExtensionContext) {
 			// Clear previous results
 			clearResolutionResults();
 
+			await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title:
+						'Resolving... This may take a moment depending on the number and size of conflicts.',
+					cancellable: false,
+				},
+				async () => {
+					if (conflictMatches.length === 1) {
+						//  Single conflict
+						const { text: conflictText, index: start } = conflictMatches[0];
+						const result = await resolveSingle(
+							conflictText,
+							language,
+							filePath,
+						);
+
+						if (result) {
+							const end = start + conflictText.length;
+							const edit = new vscode.WorkspaceEdit();
+							const range = new vscode.Range(
+								doc.positionAt(start),
+								doc.positionAt(end),
+							);
+
+							let resultText = result.result;
+							if (!resultText.endsWith('\n')) {
+								resultText += '\n';
+							}
+
+							edit.replace(doc.uri, range, resultText);
+							await vscode.workspace.applyEdit(edit);
+
+							vscode.window.showInformationMessage(
+								`AI Merge completed. ${result.summary.substring(0, 100)}${result.summary.length > 100 ? '...' : ''}`,
+							);
+
+							const panel = vscode.window.createWebviewPanel(
+								'automergeQuickStats',
+								'Automerge Quick Stats',
+								vscode.ViewColumn.One,
+								{},
+							);
+							panel.webview.html = getQuickStatsContent([result]);
+						}
+					} else {
+						//  Batch mode
+						const conflictTexts = conflictMatches.map((m) => m.text);
+						const languages = conflictMatches.map(() => language);
+						const filePaths = conflictMatches.map(() => filePath);
+
+						const results = await resolveBatch(
+							conflictTexts,
+							languages,
+							filePaths,
+						);
+
+						if (results) {
+							// Work backwards so earlier indices stay valid
+							let updatedText = text;
+
+							for (let i = conflictMatches.length - 1; i >= 0; i--) {
+								if (!results[i]) {
+									continue;
+								}
+
+								const original = conflictMatches[i].text;
+
+								// Use lastIndexOf when going in reverse — avoids duplicate-content collisions
+								const start = updatedText.lastIndexOf(original);
+								if (start === -1) {
+									continue;
+								}
+
+								const end = start + original.length;
+
+								let resultText = results[i].result;
+								if (!resultText.endsWith('\n')) {
+									resultText += '\n';
+								}
+
+								updatedText =
+									updatedText.slice(0, start) +
+									resultText +
+									updatedText.slice(end);
+							}
+
+							const edit = new vscode.WorkspaceEdit();
+							edit.replace(
+								doc.uri,
+								new vscode.Range(
+									doc.positionAt(0),
+									doc.positionAt(text.length),
+								),
+								updatedText,
+							);
+							await vscode.workspace.applyEdit(edit);
+
+							const totalResolved = results.filter(
+								(r) => r && r.confidence > 0,
+							).length;
+							vscode.window.showInformationMessage(
+								`Batch AI Merge completed. ${totalResolved}/${conflictMatches.length} conflicts resolved.`,
+							);
+
+							const panel = vscode.window.createWebviewPanel(
+								'automergeQuickStats',
+								'Automerge Quick Stats',
+								vscode.ViewColumn.One,
+								{},
+							);
+							panel.webview.html = getQuickStatsContent(results);
+						}
+					}
+				},
+			);
+
 			if (conflictMatches.length === 1) {
-				//  Single conflict 
+				//  Single conflict
 				const { text: conflictText, index: start } = conflictMatches[0];
 				const result = await resolveSingle(conflictText, language, filePath);
 
@@ -119,7 +236,7 @@ export function activate(context: vscode.ExtensionContext) {
 					panel.webview.html = getQuickStatsContent([result]);
 				}
 			} else {
-				//  Batch mode 
+				//  Batch mode
 				const conflictTexts = conflictMatches.map((m) => m.text);
 				const languages = conflictMatches.map(() => language);
 				const filePaths = conflictMatches.map(() => filePath);
